@@ -1,0 +1,86 @@
+package wwa;
+
+import java.util.concurrent.locks.ReentrantLock;
+
+public class SharedWarehouseState {
+
+    private int apples;
+    private int oranges;
+    private final ReentrantLock lock = new ReentrantLock();
+
+    public SharedWarehouseState(int initialApples, int initialOranges) {
+        this.apples = initialApples;
+        this.oranges = initialOranges;
+    }
+
+    public String checkStock() {
+        lock.lock();
+        try {
+            return String.format("STOCK,apples=%d,oranges=%d", apples, oranges);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public String buyApples(int number) {
+        lock.lock();
+        try {
+            if (number <= 0) {
+                return "ERROR,Buy_apples value must be positive";
+            }
+            if (number > apples) {
+                return String.format("ERROR,Not enough apples in stock (have %d)", apples);
+            }
+            apples -= number;
+            return String.format("OK,Bought %d apples; apples now=%d, oranges=%d",
+                    number, apples, oranges);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public String buyOranges(int number) {
+        lock.lock();
+        try {
+            if (number <= 0) {
+                return "ERROR,Buy_oranges value must be positive";
+            }
+            if (number > oranges) {
+                return String.format("ERROR,Not enough oranges in stock (have %d)", oranges);
+            }
+            oranges -= number;
+            return String.format("OK,Bought %d oranges; apples now=%d, oranges=%d",
+                    number, apples, oranges);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public String addApples(int number) {
+        lock.lock();
+        try {
+            if (number <= 0) {
+                return "ERROR,Add_apples value must be positive";
+            }
+            apples += number;
+            return String.format("OK,Added %d apples; apples now=%d, oranges=%d",
+                    number, apples, oranges);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public String addOranges(int number) {
+        lock.lock();
+        try {
+            if (number <= 0) {
+                return "ERROR,Add_oranges value must be positive";
+            }
+            oranges += number;
+            return String.format("OK,Added %d oranges; apples now=%d, oranges=%d",
+                    number, apples, oranges);
+        } finally {
+            lock.unlock();
+        }
+    }
+}

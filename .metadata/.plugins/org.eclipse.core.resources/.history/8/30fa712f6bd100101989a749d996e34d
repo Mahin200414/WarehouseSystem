@@ -1,0 +1,51 @@
+package wwa;
+
+import java.net.*;
+import java.io.*;
+
+public class WarehouseServer {
+
+    public static void main(String[] args) throws IOException {
+        ServerSocket serverSocket = new ServerSocket(5050);
+        SharedWarehouseState warehouseState = new SharedWarehouseState(1000,1000);
+        System.out.println("WarehouseServer running...");
+
+        while (true) 
+            new ClientHandler(serverSocket.accept(), warehouseState).start();
+    }
+}
+
+class ClientHandler extends Thread {
+    private Socket socket;
+    private SharedWarehouseState warehouseState;
+
+    ClientHandler(Socket s, SharedWarehouseState w) { socket = s; warehouseState = w; }
+
+    public void run() {
+        try {
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            String line;
+
+            while ((line = in.readLine()) != null) {
+                if (line.equalsIgnoreCase("QUIT")) break;
+                out.println(process(line.trim()));
+            }
+
+            socket.close();
+        } catch (Exception e) {}
+    }
+
+    private String process(String r) {
+        String[] p = r.split(",");
+        return switch (p[0].toUpperCase()) {
+            case "CHECK_STOCK" -> warehouseState.checkStock();
+            case "BUY_APPLES"  -> warehouseState.buyApples(Integer.parseInt(p[1]));
+            case "BUY_ORANGES" -> warehouseState.buyOranges(Integer.parseInt(p[1]));
+            case "ADD_APPLES"  -> warehouseState.addApples(Integer.parseInt(p[1]));
+            case "ADD_ORANGES" -> warehouseState.addOranges(Integer.parseInt(p[1]));
+            default -> "ERROR,Unknown command";
+        };
+    }
+}
+

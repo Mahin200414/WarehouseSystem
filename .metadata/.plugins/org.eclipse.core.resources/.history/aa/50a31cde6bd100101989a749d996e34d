@@ -1,0 +1,65 @@
+package wwa;
+
+import java.net.*;
+import java.io.*;
+
+public class WarehouseServer {
+
+    private static final int PORT = 5050;
+
+    public static void main(String[] args) {
+        SharedWarehouseState warehouseState = new SharedWarehouseState(1000, 1000);
+
+        System.out.println("WLFB Warehouse Server starting on port " + PORT + "...");
+
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            System.out.println("Server started. Waiting for clients...");
+            while (true) new ClientHandler(serverSocket.accept(), warehouseState).start();
+        } catch (IOException e) {
+            System.err.println("Server error: " + e.getMessage());
+        }
+    }
+
+    private static class ClientHandler extends Thread {
+        private final Socket socket;
+        private final SharedWarehouseState warehouseState;
+
+        ClientHandler(Socket socket, SharedWarehouseState warehouseState) {
+            this.socket = socket;
+            this.warehouseState = warehouseState;
+            System.out.println("Client connected from " + socket.getInetAddress());
+        }
+
+        public void run() {
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true))
+            {
+                String line;
+                while ((line = in.readLine()) != null) {
+                    System.out.println("Received: " + line);
+                    out.println(processRequest(line.trim()));
+                    if (line.equalsIgnoreCase("QUIT")) break;
+                }
+                socket.close();
+                System.out.println("Connection closed.");
+            } catch (IOException e) {
+                System.err.println("Client handler error: " + e.getMessage());
+            }
+        }
+
+        private String processRequest(String r) {
+            String[] p = r.split(",");
+            String c = p[0].toUpperCase();
+
+            switch (c) {
+                case "CHECK_STOCK":  return warehouseState.checkStock();
+                case "BUY_APPLES":   return p.length == 2 ? warehouseState.buyApples(Integer.parseInt(p[1])) : "ERROR,Use BUY_APPLES,number";
+                case "BUY_ORANGES":  return p.length == 2 ? warehouseState.buyOranges(Integer.parseInt(p[1])) : "ERROR,Use BUY_ORANGES,number";
+                case "ADD_APPLES":   return p.length == 2 ? warehouseState.addApples(Integer.parseInt(p[1])) : "ERROR,Use ADD_APPLES,number";
+                case "ADD_ORANGES":  return p.length == 2 ? warehouseState.addOranges(Integer.parseInt(p[1])) : "ERROR,Use ADD_ORANGES,number";
+                case "QUIT":         return "OK,Closing connection";
+                default:             return "ERROR,Unknown command: " + c;
+            }
+        }
+    }
+}
